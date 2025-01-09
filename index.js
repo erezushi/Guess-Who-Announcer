@@ -1,4 +1,4 @@
-import { UPSTASH_ACCESS_TOKEN } from "./config.js";
+import { UPSTASH_ACCESS_TOKEN } from './config.js';
 
 let startMessage = '';
 let guessTimeout = null;
@@ -45,7 +45,7 @@ const fetchData = async () => {
     if (done) break;
 
     const query = new URLSearchParams(window.location.search);
-    
+
     if (value.includes(query.get('key'))) {
       // Find the "object" in the string and parse it to a real object.
       const parsedValue = JSON.parse(value.match(/{.*}/)[0].replaceAll('\\', ''));
@@ -57,27 +57,62 @@ const fetchData = async () => {
           startMessage = buildStartMessage(payload, user);
           document.body.innerText = startMessage;
 
+          document.body.style.opacity = 1;
+
           break;
 
         case 'guess':
+          const guessTransitionEnd = (newText) => {
+            document.body.innerText = newText;
+
+            document.body.style.opacity = 1;
+          };
+
+          const startTransitionEnd = (endOpacity) => {
+            document.body.innerText = startMessage;
+
+            document.body.style.opacity = endOpacity;
+          };
+
           if (payload.success) {
-            document.body.innerText = `${user} guessed correctly!\nThe Pok\u00E9mon was ${capitalizeFirst(
-              payload.guess
-            )}!`;
             startMessage = '';
 
+            document.body.addEventListener(
+              'transitionend',
+              () =>
+                guessTransitionEnd(
+                  `${user} guessed correctly!\nThe Pok\u00E9mon was ${capitalizeFirst(
+                    payload.guess
+                  )}!`
+                ),
+              { once: true }
+            );
+
+            document.body.style.opacity = 0;
+
             if (guessTimeout) {
               clearInterval(guessTimeout);
               guessTimeout = null;
             }
 
             guessTimeout = setTimeout(() => {
-              document.body.innerText = '';
+              document.body.addEventListener('transitionend', () => startTransitionEnd(0), {
+                once: true,
+              });
+
+              document.body.style.opacity = 0;
             }, 10_000);
           } else {
-            document.body.innerText = `${user} tried guessing ${capitalizeFirst(
-              payload.guess
-            )}\nbut that wasn't it...`;
+            document.body.addEventListener(
+              'transitionend',
+              () =>
+                guessTransitionEnd(
+                  `${user} tried guessing ${capitalizeFirst(payload.guess)}\nbut that wasn't it...`
+                ),
+              { once: true }
+            );
+
+            document.body.style.opacity = 0;
 
             if (guessTimeout) {
               clearInterval(guessTimeout);
@@ -85,18 +120,28 @@ const fetchData = async () => {
             }
 
             guessTimeout = setTimeout(() => {
-              document.body.innerText = startMessage;
+              document.body.addEventListener('transitionend', () => startTransitionEnd(1), {
+                once: true,
+              });
+
+              document.body.style.opacity = 0;
             }, 10_000);
           }
 
           break;
 
         case 'reset':
+          const resetTransitionEnd = () => {
+            document.body.innerText = '';
+            startMessage = '';
+          };
+
           if (guessTimeout) {
             clearInterval(guessTimeout);
           }
-          document.body.innerText = '';
-          startMessage = '';
+
+          document.body.addEventListener('transitionend', resetTransitionEnd, { once: true });
+          document.body.style.opacity = 0;
 
           break;
 
