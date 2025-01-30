@@ -1,6 +1,8 @@
 import { UPSTASH_ACCESS_TOKEN } from './config.js';
 
 const UPSTASH_URL = 'https://square-reindeer-53414.upstash.io';
+const ALWAYS_ON_MESSAGE =
+  "No game is running\nStart one yourself with '!guesswho start [gen/type]'";
 
 let startMessage = '';
 let guessTimeout = null;
@@ -41,6 +43,7 @@ const fetchData = async () => {
   const query = new URLSearchParams(window.location.search);
 
   const gameKey = query.get('key');
+  const isAlwaysOn = query.get('alwaysOn') === 'true';
 
   const response = await fetch(`${UPSTASH_URL}/get/${gameKey}`, {
     headers: {
@@ -68,6 +71,19 @@ const fetchData = async () => {
         if (!payload.success) {
           startMessage = buildStartMessage(payload);
           document.body.innerText = startMessage;
+
+          document.body.style.opacity = 1;
+        } else if (isAlwaysOn) {
+          document.body.innerText = ALWAYS_ON_MESSAGE;
+
+          document.body.style.opacity = 1;
+        }
+
+        break;
+
+      case 'reset':
+        if (isAlwaysOn) {
+          document.body.innerText = ALWAYS_ON_MESSAGE;
 
           document.body.style.opacity = 1;
         }
@@ -143,9 +159,19 @@ const fetchData = async () => {
             }
 
             guessTimeout = setTimeout(() => {
-              document.body.addEventListener('transitionend', () => startTransitionEnd(0), {
-                once: true,
-              });
+              if (isAlwaysOn) {
+                document.body.addEventListener(
+                  'transitionend',
+                  () => guessTransitionEnd(ALWAYS_ON_MESSAGE),
+                  {
+                    once: true,
+                  }
+                );
+              } else {
+                document.body.addEventListener('transitionend', () => startTransitionEnd(0), {
+                  once: true,
+                });
+              }
 
               document.body.style.opacity = 0;
             }, 10_000);
@@ -179,8 +205,10 @@ const fetchData = async () => {
 
         case 'reset':
           const resetTransitionEnd = () => {
-            document.body.innerText = '';
+            document.body.innerText = isAlwaysOn ? ALWAYS_ON_MESSAGE : '';
             startMessage = '';
+
+            document.body.style.opacity = Number(isAlwaysOn);
           };
 
           if (guessTimeout) {
