@@ -2,7 +2,7 @@ import { UPSTASH_ACCESS_TOKEN } from './config.js';
 
 const UPSTASH_URL = 'https://square-reindeer-53414.upstash.io';
 const ALWAYS_ON_MESSAGE =
-  "No game is running\nStart one yourself with '!guesswho start [gen/type]'";
+  "No game is running\nStart one yourself with '!guesswho start [gen/type]'\nCheck the leaderboard with '!guesswho leaderboard'";
 
 let startMessage = '';
 let guessTimeout = null;
@@ -34,7 +34,7 @@ const buildStartMessage = (startPayload, user = 'unknown') => {
     }
   }
 
-  text += `Place your guesses with '!guesswho guess [Pok\u00E9mon]'`;
+  text += `Place a guess with '!guesswho guess [Pok\u00E9mon]',\nor ask for a hint with '!guesswho hint'`;
 
   return text;
 };
@@ -44,6 +44,20 @@ const fetchData = async () => {
 
   const gameKey = query.get('key');
   const isAlwaysOn = query.get('alwaysOn') === 'true';
+
+  if (!gameKey) {
+    document.body.innerText = 'Missing game Key\nNeed to make one? check ';
+
+    const keyLink = document.createElement('a');
+    keyLink.innerText = 'this guide';
+    keyLink.href = 'https://www.PokeErez.com/guessWho';
+
+    document.body.appendChild(keyLink);
+
+    document.body.style.opacity = 1;
+
+    return;
+  }
 
   const response = await fetch(`${UPSTASH_URL}/get/${gameKey}`, {
     headers: {
@@ -145,10 +159,10 @@ const fetchData = async () => {
               () =>
                 guessTransitionEnd(
                   `${user} guessed correctly!\nThe Pok\u00E9mon was ${capitalizeFirst(
-                    payload.guess
-                  )}!`
+                    payload.guess,
+                  )}!`,
                 ),
-              { once: true }
+              { once: true },
             );
 
             document.body.style.opacity = 0;
@@ -165,7 +179,7 @@ const fetchData = async () => {
                   () => guessTransitionEnd(ALWAYS_ON_MESSAGE),
                   {
                     once: true,
-                  }
+                  },
                 );
               } else {
                 document.body.addEventListener('transitionend', () => startTransitionEnd(0), {
@@ -180,9 +194,9 @@ const fetchData = async () => {
               'transitionend',
               () =>
                 guessTransitionEnd(
-                  `${user} tried guessing ${capitalizeFirst(payload.guess)}\nbut that wasn't it...`
+                  `${user} tried guessing ${capitalizeFirst(payload.guess)}\nbut that wasn't it...`,
                 ),
-              { once: true }
+              { once: true },
             );
 
             document.body.style.opacity = 0;
